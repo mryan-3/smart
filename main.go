@@ -1,10 +1,10 @@
 package main
 
 import (
+	"errors"
 	"fmt"
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
 type Smart_Data struct {
@@ -14,10 +14,49 @@ type Smart_Data struct {
 }
 
 var whole_data = []Smart_Data{}
+var db map[string]string
+
+// Function to validate API key
+func validateAPIKey(c *gin.Context) (bool, string, error) {
+	apiKey := c.GetHeader("Authorization")
+	if apiKey == "" {
+		return false, "", errors.New("Missing Key")
+	}
+	role, ok := db[apiKey]
+
+	if !ok {
+		return false, "", errors.New("Invalid Key")
+	}
+	return true, role, nil
+}
+
+func apiKeyAuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		isValid, role, err := validateAPIKey(c)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+		}
+
+		if !isValid {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "Invalid API Key",
+			})
+			return
+		}
+
+		c.Set("UserRole", role)
+		c.Next()
+	}
+
+}
+
 
 func main() {
 	fmt.Println("hello world jones")
 	r := gin.New()
+    r.Use(apiKeyAuthMiddleware())
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, whole_data)
 	})
@@ -52,18 +91,5 @@ func main() {
 		c.JSON(200, gin.H{"message": "Meter Deleted"})
 	})
 
-	r.POST("/books", func(c *gin.Context) {
-		var smart_data Smart_Data
-
-		if err := c.ShouldBindJSON(&smart_data); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
-		whole_data = append(whole_data, smart_data)
-
-		c.JSON(http.StatusCreated, smart_data)
-	})
 	r.Run()
 }
