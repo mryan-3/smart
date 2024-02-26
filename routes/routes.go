@@ -3,7 +3,6 @@ package routes
 import (
 	//"fmt"
 	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/mryan-3/smart/db"
@@ -54,7 +53,7 @@ func GetData(c *gin.Context) {
 	c.JSON(http.StatusOK, data)
 }
 
-func getDataById(c *gin.Context) {
+func GetDataById(c *gin.Context) {
 	var data []models.Smart_Data
 
 	id := c.Param("meter-id")
